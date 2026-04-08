@@ -20,4 +20,4 @@ streamlit run app.py
 
 ## Nota
 
-Este MVP es de uso educativo. Para decisiones definitivas, contrastar con curvas certificadas por fabricante y normativa local.
+Este MVP es de uso educativo. Para decisiones definitivas, contrastar con curvas certificadas por fabricante y normativa local. (Prueba para eleuterio MVP no final)
