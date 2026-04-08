@@ -16,5 +16,23 @@
     "B": { "magnetica": [2.9, 4.8] },
     "C": { "magnetica": [4.9, 9.6] },
     "D": { "magnetica": [9.8, 19.5] }
+  },
+  "schneider": {
+    "nombre": "Schneider (referencial)",
+    "B": { "magnetica": [3.0, 5.0] },
+    "C": { "magnetica": [5.0, 10.0] },
+    "D": { "magnetica": [10.0, 20.0] }
+  },
+  "bticino": {
+    "nombre": "Bticino (referencial)",
+    "B": { "magnetica": [3.0, 5.0] },
+    "C": { "magnetica": [5.0, 10.0] },
+    "D": { "magnetica": [10.0, 20.0] }
+  },
+  "chnin": {
+    "nombre": "Chnin (referencial)",
+    "B": { "magnetica": [3.0, 5.0] },
+    "C": { "magnetica": [5.0, 10.0] },
+    "D": { "magnetica": [10.0, 20.0] }
   }
 }

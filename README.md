@@ -14,6 +14,7 @@ streamlit run app.py
 - Presets eléctricos (120V, 220V, 380V)
 - Monofásico / Trifásico
 - Carga resistencia o motor (con FP y eficiencia)
+- Catálogo de marcas referenciales: Schneider, Bticino, Chnin
 - Comparación de múltiples In
 - Ranking automático (Conservador/Balanceado/Económico/Custom)
 - Exportación a PDF y CSV

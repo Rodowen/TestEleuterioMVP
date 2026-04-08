@@ -10,6 +10,7 @@ Cuando te pasen el enlace, abrilo en tu navegador (Chrome/Edge) desde celular o 
 - Escribí potencia (W o HP).
 - Elegí si la carga es **resistencia** o **motor**.
 - Elegí varias opciones de térmico (In) para comparar.
+- En "Catálogo de curva" podés elegir marca referencial (Schneider, Bticino, Chnin).
 
 ## 3) Simulá
 
