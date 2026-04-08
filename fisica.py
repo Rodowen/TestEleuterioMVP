@@ -29,6 +29,7 @@ class ParametrosSimulacion:
     curva_termica: TipoCurva
     sistema_fases: TipoSistema = "monofasico"
     fabricante_curva: str = "generica_iec"
+    modelo_certificado_id: str | None = None
     factor_potencia: float = 0.9
     eficiencia: float = 0.9
     multiplicador_arranque: float = 6.0
@@ -71,6 +72,103 @@ def cargar_curvas_desde_json(ruta: str | Path = "curvas.json") -> Dict[str, dict
             "D": {"magnetica": list(CURVAS_IEC["D"]["magnetica"])},
         }
     }
+
+
+def cargar_catalogo_modelos_json(ruta: str | Path = "curvas_modelos.json") -> Dict[str, dict]:
+    """Carga catálogo de modelos con curvas certificadas por fabricante.
+
+    Formato esperado:
+    {
+      "schneider": {
+        "modelos": {
+          "schneider_acti9_c16": {
+            "nombre": "Acti9 iC60N C16",
+            "curva": "C",
+            "archivo": "data/curvas_certificadas/schneider_acti9_c16.csv"
+          }
+        }
+      }
+    }
+    """
+    path = Path(ruta)
+    if not path.exists():
+        return {}
+
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, dict):
+            return data
+    except (OSError, ValueError):
+        pass
+
+    return {}
+
+
+def listar_modelos_certificados(fabricante: str) -> Dict[str, str]:
+    """Lista modelos certificados disponibles por fabricante."""
+    catalogo = cargar_catalogo_modelos_json()
+    bloque = catalogo.get(fabricante, {})
+    modelos = bloque.get("modelos", {})
+    salida: Dict[str, str] = {}
+    for modelo_id, info in modelos.items():
+        salida[modelo_id] = str(info.get("nombre", modelo_id))
+    return salida
+
+
+def cargar_curva_certificada_modelo(modelo_id: str, ruta_catalogo: str | Path = "curvas_modelos.json") -> dict | None:
+    """Carga puntos certificados de un modelo desde CSV.
+
+    CSV esperado con cabeceras:
+    corriente_a,t_min_s,t_max_s
+    """
+    catalogo = cargar_catalogo_modelos_json(ruta_catalogo)
+    for _, bloque in catalogo.items():
+        modelos = bloque.get("modelos", {})
+        info = modelos.get(modelo_id)
+        if not info:
+            continue
+
+        archivo = info.get("archivo")
+        if not archivo:
+            return None
+
+        path = Path(archivo)
+        if not path.exists():
+            return None
+
+        try:
+            import csv
+
+            corrientes: list[float] = []
+            t_min: list[float] = []
+            t_max: list[float] = []
+
+            with path.open("r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    corrientes.append(float(row["corriente_a"]))
+                    t_min.append(float(row["t_min_s"]))
+                    t_max.append(float(row["t_max_s"]))
+
+            if not corrientes:
+                return None
+
+            idx = np.argsort(np.array(corrientes))
+            c = np.array(corrientes)[idx]
+            mn = np.array(t_min)[idx]
+            mx = np.array(t_max)[idx]
+            return {
+                "corriente_a": c,
+                "t_min_s": mn,
+                "t_max_s": mx,
+                "curva": info.get("curva"),
+                "nombre": info.get("nombre", modelo_id),
+            }
+        except Exception:
+            return None
+
+    return None
 
 
 def obtener_rango_magnetico(curva: TipoCurva, fabricante: str = "generica_iec") -> Tuple[float, float]:
@@ -122,7 +220,31 @@ def curva_disparo_limites(
     curva: TipoCurva,
     multiplo_in: np.ndarray,
     fabricante: str = "generica_iec",
+    in_termico_a: float | None = None,
+    modelo_certificado_id: str | None = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
+    # Si hay curva certificada cargada para el modelo, se usa prioridad alta.
+    if modelo_certificado_id and in_termico_a and in_termico_a > 0:
+        curva_modelo = cargar_curva_certificada_modelo(modelo_certificado_id)
+        if curva_modelo is not None:
+            corriente_obj = multiplo_in * in_termico_a
+            c = np.array(curva_modelo["corriente_a"], dtype=float)
+            mn = np.array(curva_modelo["t_min_s"], dtype=float)
+            mx = np.array(curva_modelo["t_max_s"], dtype=float)
+
+            c = np.clip(c, 1e-6, None)
+            mn = np.clip(mn, 1e-6, None)
+            mx = np.clip(mx, 1e-6, None)
+
+            log_c = np.log10(c)
+            log_mn = np.log10(mn)
+            log_mx = np.log10(mx)
+            log_obj = np.log10(np.clip(corriente_obj, c.min(), c.max()))
+
+            t_min_interp = np.power(10.0, np.interp(log_obj, log_c, log_mn))
+            t_max_interp = np.power(10.0, np.interp(log_obj, log_c, log_mx))
+            return t_min_interp, t_max_interp
+
     t_termico = tiempo_disparo_termico_s(multiplo_in)
 
     t_max = np.clip(t_termico * 1.6, 0.02, 3600.0)
@@ -161,9 +283,16 @@ def evaluar_trip(
     tiempo_s: np.ndarray,
     corriente_carga_a: np.ndarray,
     fabricante: str = "generica_iec",
+    modelo_certificado_id: str | None = None,
 ) -> Tuple[bool, float | None, float | None]:
     multiplo = corriente_carga_a / in_termico_a
-    t_min, _ = curva_disparo_limites(curva, multiplo, fabricante)
+    t_min, _ = curva_disparo_limites(
+        curva,
+        multiplo,
+        fabricante,
+        in_termico_a=in_termico_a,
+        modelo_certificado_id=modelo_certificado_id,
+    )
 
     mascara_trip = t_min <= tiempo_s
     if not np.any(mascara_trip):
@@ -189,7 +318,18 @@ def simular(params: ParametrosSimulacion) -> Dict[str, np.ndarray | float | bool
 
     multiplo_malla = np.logspace(0, 2, 400)
     corr_malla_a = multiplo_malla * params.in_termico_a
-    t_min, t_max = curva_disparo_limites(params.curva_termica, multiplo_malla, params.fabricante_curva)
+
+    curva_certificada = None
+    if params.modelo_certificado_id:
+        curva_certificada = cargar_curva_certificada_modelo(params.modelo_certificado_id)
+
+    t_min, t_max = curva_disparo_limites(
+        params.curva_termica,
+        multiplo_malla,
+        params.fabricante_curva,
+        in_termico_a=params.in_termico_a,
+        modelo_certificado_id=params.modelo_certificado_id,
+    )
 
     trip, t_trip, i_trip = evaluar_trip(
         params.in_termico_a,
@@ -197,6 +337,7 @@ def simular(params: ParametrosSimulacion) -> Dict[str, np.ndarray | float | bool
         tiempo_s,
         corriente_carga_a,
         params.fabricante_curva,
+        params.modelo_certificado_id,
     )
 
     return {
@@ -205,6 +346,7 @@ def simular(params: ParametrosSimulacion) -> Dict[str, np.ndarray | float | bool
         "corriente_nominal_a": i_nom,
         "corriente_pico_a": float(np.max(corriente_carga_a)),
         "in_termico_a": params.in_termico_a,
+        "usa_curva_certificada": bool(curva_certificada is not None),
         "corriente_malla_a": corr_malla_a,
         "t_disparo_min_s": t_min,
         "t_disparo_max_s": t_max,

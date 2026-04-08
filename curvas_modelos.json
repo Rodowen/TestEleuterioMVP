@@ -1,0 +1,29 @@
+{
+  "schneider": {
+    "modelos": {
+      "schneider_acti9_c16_demo": {
+        "nombre": "Schneider Acti9 C16 (demo)",
+        "curva": "C",
+        "archivo": "data/curvas_certificadas/schneider_acti9_c16_demo.csv"
+      }
+    }
+  },
+  "bticino": {
+    "modelos": {
+      "bticino_fc881c16_demo": {
+        "nombre": "Bticino FC881C16 (demo)",
+        "curva": "C",
+        "archivo": "data/curvas_certificadas/bticino_fc881c16_demo.csv"
+      }
+    }
+  },
+  "chnin": {
+    "modelos": {
+      "chnin_c16_demo": {
+        "nombre": "Chnin C16 (demo)",
+        "curva": "C",
+        "archivo": "data/curvas_certificadas/chnin_c16_demo.csv"
+      }
+    }
+  }
+}

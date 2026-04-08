@@ -6,7 +6,13 @@ from datetime import datetime
 
 import streamlit as st
 
-from fisica import ParametrosSimulacion, cargar_curvas_desde_json, puntuar_alternativa, simular
+from fisica import (
+    ParametrosSimulacion,
+    cargar_curvas_desde_json,
+    listar_modelos_certificados,
+    puntuar_alternativa,
+    simular,
+)
 from plotting import crear_figura_comparativa
 from reporting import exportar_ranking_csv, exportar_reporte_pdf, guardar_figura_png
 from validaciones import validar_entradas
@@ -71,6 +77,25 @@ def main() -> None:
         fabricante_curva = st.selectbox("Catálogo de curva", options=fabricantes, index=0)
         curva_termica = st.selectbox("Curva", options=["B", "C", "D"], index=1)
 
+        st.subheader("Curva por modelo")
+        usar_curva_certificada = st.checkbox(
+            "Usar curva por modelo (si existe archivo CSV)",
+            value=False,
+            help="Si se activa y existe el modelo cargado, la app usa puntos de curva desde CSV.",
+        )
+        modelo_certificado_id = None
+        if usar_curva_certificada:
+            modelos = listar_modelos_certificados(fabricante_curva)
+            if modelos:
+                opciones_modelos = list(modelos.keys())
+                modelo_certificado_id = st.selectbox(
+                    "Modelo",
+                    options=opciones_modelos,
+                    format_func=lambda x: modelos.get(x, x),
+                )
+            else:
+                st.warning("No hay modelos configurados para esta marca en curvas_modelos.json.")
+
         opciones_in = st.multiselect(
             "Comparar In [A]",
             options=[2, 4, 6, 10, 16, 20, 25, 32, 40, 50, 63, 80, 100],
@@ -119,6 +144,7 @@ def main() -> None:
                     curva_termica=curva_termica,
                     sistema_fases=sistema_fases,
                     fabricante_curva=fabricante_curva,
+                    modelo_certificado_id=modelo_certificado_id,
                     factor_potencia=factor_potencia,
                     eficiencia=eficiencia,
                     multiplicador_arranque=multiplicador_arranque,
@@ -155,6 +181,13 @@ def main() -> None:
 
                 ranking = sorted(simulaciones, key=lambda x: x["score"], reverse=True)
                 mejor = ranking[0] if ranking else None
+
+                usa_modelo = any(bool(x["data"].get("usa_curva_certificada")) for x in ranking)
+                if usa_modelo:
+                    st.success("🧪 Modo curva por modelo activo (CSV cargado).")
+                else:
+                    st.info("ℹ️ Modo referencial IEC activo (sin CSV de modelo cargado).")
+
                 if mejor is not None:
                     st.info(f"Recomendación inicial: **{mejor['label']}**")
                 else:
@@ -194,6 +227,7 @@ def main() -> None:
                     "Eficiencia": eficiencia,
                     "Curva": curva_termica,
                     "Catálogo": fabricante_curva,
+                    "Modelo certificado": modelo_certificado_id or "No seleccionado",
                     "Opciones In [A]": ", ".join(str(x) for x in opciones_in),
                     "Modo ranking": modo_ranking,
                     "Pesos": f"seguridad={peso_seguridad:.2f}, margen={peso_margen:.2f}, sobredim={peso_sobredim:.2f}",

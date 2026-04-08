@@ -11,6 +11,7 @@ Cuando te pasen el enlace, abrilo en tu navegador (Chrome/Edge) desde celular o 
 - Elegí si la carga es **resistencia** o **motor**.
 - Elegí varias opciones de térmico (In) para comparar.
 - En "Catálogo de curva" podés elegir marca referencial (Schneider, Bticino, Chnin).
+- Si activás "Usar curva por modelo", la app intenta usar curva del fabricante por archivo CSV.
 
 ## 3) Simulá
 
