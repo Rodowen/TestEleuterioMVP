@@ -142,6 +142,10 @@ def main() -> None:
 
             with col2:
                 st.subheader("Resumen de opciones")
+                data_base = simulaciones[0]["data"]
+                st.metric("Corriente nominal de carga", f"{float(data_base['corriente_nominal_a']):.2f} A")
+                st.metric("Corriente pico estimada", f"{float(data_base['corriente_pico_a']):.2f} A")
+
                 for item in simulaciones:
                     data = item["data"]
                     if data["trip"]:
@@ -160,6 +164,22 @@ def main() -> None:
                 for idx, item in enumerate(ranking, start=1):
                     estado = "TRIP" if item["data"]["trip"] else "SEGURO"
                     st.write(f"{idx}. {item['label']} — {estado} — score {item['score']:.1f}")
+
+                st.markdown("### Tabla rápida")
+                tabla = []
+                for item in ranking:
+                    d = item["data"]
+                    tabla.append(
+                        {
+                            "opción": item["label"],
+                            "In [A]": float(d["in_termico_a"]),
+                            "I nominal [A]": round(float(d["corriente_nominal_a"]), 2),
+                            "I pico [A]": round(float(d["corriente_pico_a"]), 2),
+                            "estado": "TRIP" if d["trip"] else "SEGURO",
+                            "score": round(float(item["score"]), 1),
+                        }
+                    )
+                st.dataframe(tabla, use_container_width=True)
 
                 nombre_png = f"grafico_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
                 ruta_png = guardar_figura_png(fig, f"reports/{nombre_png}")

@@ -19,7 +19,14 @@ def crear_figura_comparativa(simulaciones: List[Dict[str, object]]):
     data_base = simulaciones[0]["data"]
     tiempo_s = data_base["tiempo_s"]
     corriente_carga_a = data_base["corriente_carga_a"]
+    corriente_nominal_a = float(data_base.get("corriente_nominal_a", 0.0))
+    corriente_pico_a = float(data_base.get("corriente_pico_a", 0.0))
     ax.loglog(corriente_carga_a, tiempo_s, "b", linewidth=2.3, label="Curva de carga")
+
+    if corriente_nominal_a > 0:
+        ax.axvline(corriente_nominal_a, color="tab:blue", linestyle=":", linewidth=1.5, label=f"I nominal {corriente_nominal_a:.2f} A")
+    if corriente_pico_a > 0:
+        ax.axvline(corriente_pico_a, color="tab:cyan", linestyle=":", linewidth=1.5, label=f"I pico {corriente_pico_a:.2f} A")
 
     for i, item in enumerate(simulaciones):
         label = item["label"]

@@ -17,6 +17,7 @@ streamlit run app.py
 - Comparación de múltiples In
 - Ranking automático (Conservador/Balanceado/Económico/Custom)
 - Exportación a PDF y CSV
+- Visualización explícita de I nominal e I pico (métricas + líneas en gráfico)
 
 ## Nota
 
